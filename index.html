@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Estoque (CA 010)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #fff;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            text-align: center;
+            color: #ff0000;
+            padding: 20px 0;
+            border-bottom: 2px solid #ff0000;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            color: #000;
+        }
+        th, td {
+            border: 1px solid #ff0000;
+            padding: 12px 15px;
+            text-align: center;
+        }
+        th {
+            background-color: #ff0000;
+            color: #fff;
+            font-size: 18px;
+        }
+        td {
+            background-color: #f9f9f9;
+            font-size: 16px;
+        }
+        tr:hover {
+            background-color: #f0f0f0;
+        }
+        .obs {
+            color: #ff0000;
+        }
+        .form-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 20px auto;
+            text-align: center;
+        }
+        .form-container input, .form-container button {
+            padding: 10px;
+            margin: 5px;
+            font-size: 16px;
+        }
+        .delete-btn, .edit-btn {
+            background-color: #ff0000;
+            color: white;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 2px;
+        }
+        .delete-btn:hover, .edit-btn:hover {
+            background-color: #cc0000;
+        }
+        #report-btn {
+            display: block;
+            width: 200px;
+            margin: 20px auto;
+            padding: 10px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #007BFF;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #report-btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Controle de Estoque (CA 010)</h1>
+
+    <table id="productTable">
+        <thead>
+            <tr>
+                <th>PRODUTO</th>
+                <th>CA-010</th>
+                <th>DEMANDAS</th>
+                <th>TOTAL C/ DEMANDAS</th>
+                <th>OBSERVAÇÃO</th>
+                <th>AÇÕES</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <div class="form-container">
+        <h2>Adicionar/Editar Produto</h2>
+        <input type="hidden" id="editIndex" value="">
+        <input type="text" id="productName" placeholder="Produto">
+        <input type="number" id="ca010" placeholder="CA-010" oninput="calculateTotal()">
+        <input type="number" id="demandas" placeholder="Demandas" oninput="calculateTotal()">
+        <input type="number" id="totalDemandas" placeholder="Total C/ Demandas" readonly>
+        <input type="text" id="observacao" placeholder="Observação">
+        <button onclick="saveProduct()">Salvar Produto</button>
+        <button id="report-btn" onclick="openReport()">Visualizar Relatório</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProducts();
+        });
+
+        function loadProducts() {
+            const products = JSON.parse(localStorage.getItem('products')) || [];
+            const tbody = document.querySelector('tbody');
+            tbody.innerHTML = '';
+            products.forEach((product, index) => {
+                const row = `
+                    <tr>
+                        <td>${product.name}</td>
+                        <td>${product.ca010}</td>
+                        <td>${product.demandas}</td>
+                        <td class="large-text">${product.totalDemandas}</td>
+                        <td class="obs">${product.observacao}</td>
+                        <td>
+                            <button class="edit-btn" onclick="editProduct(${index})">Editar</button>
+                            <button class="delete-btn" onclick="deleteProduct(${index})">Remover</button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function saveProduct() {
+            const index = document.getElementById('editIndex').value;
+            const ca010 = parseInt(document.getElementById('ca010').value, 10) || 0;
+            const demandas = parseInt(document.getElementById('demandas').value, 10) || 0;
+            const totalDemandas = ca010 - demandas;
+            
+            const product = {
+                name: document.getElementById('productName').value,
+                ca010: ca010,
+                demandas: demandas,
+                totalDemandas: totalDemandas,
+                observacao: document.getElementById('observacao').value
+            };
+
+            const products = JSON.parse(localStorage.getItem('products')) || [];
+
+            if (index === '') {
+                products.push(product);
+            } else {
+                products[index] = product;
+            }
+
+            localStorage.setItem('products', JSON.stringify(products));
+            loadProducts();
+            clearForm();
+        }
+
+        function editProduct(index) {
+            const products = JSON.parse(localStorage.getItem('products')) || [];
+            const product = products[index];
+
+            document.getElementById('editIndex').value = index;
+            document.getElementById('productName').value = product.name;
+            document.getElementById('ca010').value = product.ca010;
+            document.getElementById('demandas').value = product.demandas;
+            document.getElementById('totalDemandas').value = product.totalDemandas;
+            document.getElementById('observacao').value = product.observacao;
+        }
+
+        function deleteProduct(index) {
+            const products = JSON.parse(localStorage.getItem('products')) || [];
+            products.splice(index, 1);
+            localStorage.setItem('products', JSON.stringify(products));
+            loadProducts();
+            clearForm();
+        }
+
+        function clearForm() {
+            document.getElementById('editIndex').value = '';
+            document.getElementById('productName').value = '';
+            document.getElementById('ca010').value = '';
+            document.getElementById('demandas').value = '';
+            document.getElementById('totalDemandas').value = '';
+            document.getElementById('observacao').value = '';
+        }
+
+        function calculateTotal() {
+            const ca010 = parseInt(document.getElementById('ca010').value, 10) || 0;
+            const demandas = parseInt(document.getElementById('demandas').value, 10) || 0;
+            const totalDemandas = ca010 - demandas;
+            document.getElementById('totalDemandas').value = totalDemandas;
+        }
+
+        function openReport() {
+            const products = JSON.parse(localStorage.getItem('products')) || [];
+            // Ordenar produtos pelo Total C/ Demandas (menor para maior)
+            products.sort((a, b) => a.totalDemandas - b.totalDemandas);
+
+            let reportHtml = `
+                <!DOCTYPE html>
+                <html lang="pt-BR">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Relatório de Produtos</title>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            background-color: #fff;
+                            color: #000;
+                            margin: 0;
+                            padding: 0;
+                            overflow: hidden; /* Remove rolagem na janela */
+                        }
+                        h1 {
+                            text-align: center;
+                            color: #ff0000;
+                            padding: 20px 0;
+                            border-bottom: 2px solid #ff0000;
+                        }
+                        .container {
+                            height: 100vh; /* Ocupa toda a altura da viewport */
+                            overflow-y: auto; /* Permite rolagem vertical */
+                            padding: 0 20px;
+                        }
+                        table {
+                            width: 100%; /* Ocupa toda a largura da viewport */
+                            border-collapse: collapse;
+                            margin: 20px 0;
+                            color: #000;
+                        }
+                        th, td {
+                            border: 1px solid #ff0000;
+                            padding: 12px 15px;
+                            text-align: center;
+                            font-size: 18px; /* Tamanho ajustado */
+                        }
+                        th {
+                            background-color: #ff0000;
+                            color: #fff;
+                        }
+                        td {
+                            background-color: #f9f9f9;
+                        }
+                        tr:hover {
+                            background-color: #f0f0f0;
+                        }
+                        .obs {
+                            color: #ff0000;
+                        }
+                        .red-background {
+                            background-color: #ff0000;
+                            color: #000;
+                            font-weight: bold;
+                        }
+                        .normal-background {
+                            background-color: #fff;
+                            color: #000;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h1>Relatório de Estoque (CA 010)</h1>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>PRODUTO</th>
+                                    <th>CA-010</th>
+                                    <th>DEMANDAS</th>
+                                    <th>TOTAL C/ DEMANDAS</th>
+                                    <th>OBSERVAÇÃO</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            products.forEach(product => {
+                const rowClass = product.totalDemandas < 100 ? 'red-background' : 'normal-background';
+                reportHtml += `
+                    <tr class="${rowClass}">
+                        <td>${product.name}</td>
+                        <td>${product.ca010}</td>
+                        <td>${product.demandas}</td>
+                        <td>${product.totalDemandas}</td>
+                        <td class="obs">${product.observacao}</td>
+                    </tr>
+                `;
+            });
+
+            reportHtml += `
+                            </tbody>
+                        </table>
+                    </div>
+                </body>
+                </html>
+            `;
+
+            const reportWindow = window.open('', '_blank');
+            reportWindow.document.write(reportHtml);
+            reportWindow.document.close();
+        }
+    </script>
+</body>
+</html>
